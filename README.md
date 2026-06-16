@@ -13,10 +13,11 @@ Microservicio REST construido con **Spring Boot 3.5** que expone un endpoint par
 5. [API REST](#5-api-rest)
 6. [Conversión de zona horaria](#6-conversión-de-zona-horaria)
 7. [Tests](#7-tests)
-8. [Requisitos previos](#8-requisitos-previos)
-9. [Ejecución local](#9-ejecución-local)
-10. [Despliegue con Docker](#10-despliegue-con-docker)
-11. [Stack tecnológico](#11-stack-tecnológico)
+8. [Colección Postman](#8-colección-postman)
+9. [Requisitos previos](#9-requisitos-previos)
+10. [Ejecución local](#10-ejecución-local)
+11. [Despliegue con Docker](#11-despliegue-con-docker)
+12. [Stack tecnológico](#12-stack-tecnológico)
 
 ---
 
@@ -163,6 +164,8 @@ price-service/
 │   └── Dockerfile                          # Build multi-stage (JDK builder + JRE runtime)
 ├── docs/
 │   └── adr/                                # Architecture Decision Records
+├── postman/
+│   └── PriceService.postman_collection.json  # Colección Postman v2.1 (19 requests con tests)
 │       ├── ADR-001-arquitectura-hexagonal.md
 │       ├── ADR-002-modelo-dominio-record.md
 │       ├── ADR-003-zona-horaria-utc.md
@@ -410,7 +413,67 @@ Para verificar el umbral mínimo de cobertura (80%) como gate de calidad:
 
 ---
 
-## 8. Requisitos previos
+## 8. Colección Postman
+
+El directorio [`postman/`](postman/) contiene la colección **Postman v2.1** lista para importar y ejecutar contra el servicio en local o en Docker.
+
+### Archivo
+
+| Archivo | Descripción |
+|---------|-------------|
+| [`postman/PriceService.postman_collection.json`](postman/PriceService.postman_collection.json) | Colección con 19 requests y tests automáticos |
+
+### Cómo importar
+
+1. Abrir **Postman** → **Import** → seleccionar `postman/PriceService.postman_collection.json`.
+2. Ajustar la variable de colección `base_url` si el servicio no corre en `http://localhost:8080`.
+
+### Escenarios incluidos
+
+#### Escenarios de la especificación (5 casos requeridos)
+
+| Test | Fecha/Hora Madrid | UTC enviado | PriceList esperado | Precio |
+|------|-------------------|-------------|--------------------|--------|
+| 1 | 14/06 10:00 | `2020-06-14T08:00:00Z` | 1 | 35.50 EUR |
+| 2 | 14/06 16:00 | `2020-06-14T14:00:00Z` | 2 | 25.45 EUR |
+| 3 | 14/06 21:00 | `2020-06-14T19:00:00Z` | 1 | 35.50 EUR |
+| 4 | 15/06 10:00 | `2020-06-15T08:00:00Z` | 3 | 30.50 EUR |
+| 5 | 16/06 21:00 | `2020-06-16T19:00:00Z` | 4 | 38.95 EUR |
+
+#### Errores y casos límite (8 casos)
+
+| Caso | HTTP esperado |
+|------|---------------|
+| Producto/brand inexistente | 404 |
+| Fecha anterior a cualquier tarifa | 404 |
+| `brandId` ausente | 400 |
+| `productId` ausente | 400 |
+| `applicationDate` ausente | 400 |
+| Formato de fecha inválido | 400 |
+| `productId` no numérico | 400 |
+| `productId` negativo (viola `@Positive`) | 400 |
+
+#### Casos límite de solapamiento de tarifas (6 casos)
+
+| Caso | Resultado esperado |
+|------|--------------------|
+| Inicio exacto PriceList 2 (13:00:00 UTC Jun14) | PL-2 → 25.45 EUR |
+| Fin exacto PriceList 2 (16:30:00 UTC Jun14) | PL-2 → 25.45 EUR |
+| Un segundo después del fin de PL-2 | PL-1 → 35.50 EUR |
+| Inicio exacto PriceList 3 (22:00:00 UTC Jun14) | PL-3 → 30.50 EUR |
+| Entre fin PL-3 y inicio PL-4 (10:00 UTC Jun15) | PL-1 → 35.50 EUR |
+| Inicio exacto PriceList 4 (14:00:00 UTC Jun15) | PL-4 → 38.95 EUR |
+
+Cada request incluye **tests automáticos de Postman** que verifican el código HTTP, los campos del body y los valores esperados. Para ejecutar toda la colección de una vez se puede usar **Newman** (CLI de Postman):
+
+```bash
+npm install -g newman
+newman run postman/PriceService.postman_collection.json
+```
+
+---
+
+## 9. Requisitos previos
 
 ### Ejecución local (sin Docker)
 
@@ -429,7 +492,7 @@ Para verificar el umbral mínimo de cobertura (80%) como gate de calidad:
 
 ---
 
-## 9. Ejecución local
+## 10. Ejecución local
 
 ### Clonar y compilar
 
@@ -488,7 +551,7 @@ Disponible en `http://localhost:8080/h2-console` con:
 
 ---
 
-## 10. Despliegue con Docker
+## 11. Despliegue con Docker
 
 ### Build de la imagen
 
@@ -542,7 +605,7 @@ docker compose up
 
 ---
 
-## 11. Stack tecnológico
+## 12. Stack tecnológico
 
 | Tecnología | Versión | Uso |
 |-----------|---------|-----|
