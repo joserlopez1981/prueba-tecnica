@@ -421,7 +421,7 @@ El directorio [`postman/`](postman/) contiene la colección **Postman v2.1** lis
 
 | Archivo | Descripción |
 |---------|-------------|
-| [`postman/PriceService.postman_collection.json`](postman/PriceService.postman_collection.json) | Colección con 19 requests y tests automáticos |
+| [`postman/PriceService.postman_collection.json`](postman/PriceService.postman_collection.json) | Colección con 5 requests y tests automáticos |
 
 ### Cómo importar
 
