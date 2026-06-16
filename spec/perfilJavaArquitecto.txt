@@ -1,0 +1,60 @@
+Java moderno, arquitecturas de microservicios y/o serverless, event-driven, patrones de resiliencia,
+ arquitectura hexagonal, bases de datos relacionales y no relacionales y enfoques multicloud entre otros
+ muchos.
+Además, se requiere un perfil con una clara orientación técnica y “hands-on”, participando activamente
+ en la codificación y desarrollo de soluciones, no solo en la definición de arquitecturas y diseños.
+
+Detalle de responsabilidades:
+-   Comunicar ideas, nuevos métodos o tecnologías con el objetivo de mejorar el stack tecnológico
+ actual.
+-   Participar de forma activa y constante en diseño y desarrollo de APIs, contribuyendo también a la
+ implementación.
+-   Participar directamente en la codificación de componentes críticos, asegurando la calidad técnica de
+ las soluciones.
+-   Velar por la calidad de desarrollo y limpieza de código (Clean Code) participando en las 
+pullrequest.
+-   Mentorizar al equipo de desarrollo que liderará, ayudando al equipo a crecer y a fortalecer la
+ comunidad tecnológica de INDITEX.
+-   Cumplir con todas las pautas y estándares del proyecto y la empresa y asegurarse de que el equipo lo
+ esté haciendo.
+-   Motivar y animar al equipo constantemente, el cual tendrá que conseguir unos estándares de calidad
+ elevados.
+-   Garantizar el éxito y calidad de las soluciones entregadas.
+-   Cumplir con todos los compromisos mediante el cierre en plazo de los entregables.
+Entorno Tecnológico
+-   Vamos a trabajar con un stack tecnológico moderno, donde vamos a tener un foco absoluto por crear un
+ producto diferenciador. La parte tecnológica está compuesta por Java (Spring Boot / Spring Cloud),
+ arquitecturas de microservicios, arquitectura hexagonal y enfoques event-driven, APIs REST, mensajería,
+ bases de datos relacionales y no relacionales y enfoques multicloud entre otros muchos. De cara a
+ organización vamos a trabajar con Jira, Confluence y Miró para la gestión del día a día.
+ 
+REQUISITOS (HARD SKILLS)
+Para la viabilidad de un perfil en este puesto se requiere un amplio conocimiento en arquitectura
+ backend basada en Java, así como un conocimiento avanzado en el diseño de sistemas distribuidos
+ resilientes, APIs e integración de sistemas, combinado con una fuerte capacidad de ejecución técnica
+ directa (hands-on).
+-   Dominio de Java (8+) y frameworks del ecosistema como Spring Boot, Spring Cloud, Hibernate/JPA.
+-   Experiencia en arquitecturas de microservicios y sistemas distribuidos escalables.
+-   Experiencia sólida en arquitectura hexagonal (Ports & Adapters) y separación de responsabilidades.
+-   Experiencia en arquitecturas event-driven (Kafka, RabbitMQ u otros brokers de mensajería).
+-   Diseño e implementación de APIs REST (OpenAPI/Swagger) y gobierno de APIs.
+-   Conocimiento en patrones de resiliencia (circuit breaker, retry, bulkhead, timeout, fallback) y
+ tolerancia a fallos.
+-   Conocimiento en patrones de diseño y arquitectura (DDD, Clean Architecture, SOLID).
+-   Experiencia en bases de datos relacionales (PostgreSQL, Oracle, MySQL) y no relacionales (MongoDB,
+ Redis).
+-   Experiencia en codificación de soluciones backend en entornos productivos, asegurando buenas
+ prácticas y calidad.
+-   Experiencia con testing backend (unitario, integración, contract testing).
+-   Experiencia en debugging, profiling y optimización de aplicaciones backend.
+-   Experiencia con CI/CD e integración continua (Git, pipelines, etc.).
+-   Experiencia y nociones importantes y uso de herramientas IA para mejorar en productividad (Github
+ Copilot, Claude Enterprise,…)
+ 
+Se valorará positivamente:
+-   Experiencia en event sourcing, CQRS y diseño de sistemas desacoplados.
+-   Conocimientos en cloud (AWS, Azure o GCP) y arquitecturas serverless.
+-   Experiencia con contenedores y orquestación (Docker, Kubernetes).
+-   Experiencia en observabilidad (logs, métricas y tracing: ELK, Prometheus, Grafana, OpenTelemetry).
+-   Capacidad de entender un producto y aportar ideas para mejorar su funcionamiento general.
+-   Experiencia con metodologías ágiles de desarrollo (SCRUM, Kanban...).
