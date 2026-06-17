@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.List;
 
 public interface PriceJpaRepository extends JpaRepository<PriceEntity, Long> {
 
@@ -16,10 +16,8 @@ public interface PriceJpaRepository extends JpaRepository<PriceEntity, Long> {
               AND p.brandId = :brandId
               AND p.startDate <= :applicationDate
               AND p.endDate >= :applicationDate
-            ORDER BY p.priority DESC
-            LIMIT 1
             """)
-    Optional<PriceEntity> findApplicablePrice(
+    List<PriceEntity> findCandidatePrices(
             @Param("productId") Long productId,
             @Param("brandId") Long brandId,
             @Param("applicationDate") Instant applicationDate

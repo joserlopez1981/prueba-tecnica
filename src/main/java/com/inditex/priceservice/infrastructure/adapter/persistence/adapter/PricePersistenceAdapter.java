@@ -6,10 +6,11 @@ import com.inditex.priceservice.infrastructure.adapter.persistence.mapper.PriceP
 import com.inditex.priceservice.infrastructure.adapter.persistence.repository.PriceJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -20,9 +21,12 @@ public class PricePersistenceAdapter implements FindPricePort {
     private final PricePersistenceMapper pricePersistenceMapper;
 
     @Override
-    public Optional<Price> findApplicablePrice(Instant applicationDate, Long productId, Long brandId) {
-        log.debug("Querying DB: productId={}, brandId={}, date={}", productId, brandId, applicationDate);
-        return priceJpaRepository.findApplicablePrice(productId, brandId, applicationDate)
-                .map(pricePersistenceMapper::toDomain);
+    @Cacheable(value = "prices")
+    public List<Price> findCandidatePrices(Instant applicationDate, Long productId, Long brandId) {
+        log.debug("Querying DB for candidate prices: productId={}, brandId={}, date={}", productId, brandId, applicationDate);
+        return priceJpaRepository.findCandidatePrices(productId, brandId, applicationDate)
+                .stream()
+                .map(pricePersistenceMapper::toDomain)
+                .toList();
     }
 }

@@ -2,6 +2,7 @@ package com.inditex.priceservice.infrastructure.entrypoint.rest.controller;
 
 import com.inditex.priceservice.domain.port.in.GetApplicablePriceUseCase;
 import com.inditex.priceservice.infrastructure.entrypoint.rest.dto.ErrorResponse;
+import com.inditex.priceservice.infrastructure.entrypoint.rest.dto.PriceQuery;
 import com.inditex.priceservice.infrastructure.entrypoint.rest.dto.PriceResponse;
 import com.inditex.priceservice.infrastructure.entrypoint.rest.mapper.PriceRestMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -59,8 +61,19 @@ public class PriceController {
             @Parameter(description = "Brand identifier (1 = ZARA)", required = true, example = "1")
             @RequestParam @NotNull @Positive Long brandId
     ) {
-        log.info("Query price: productId={}, brandId={}, applicationDate={}", productId, brandId, applicationDate);
-        var price = getApplicablePriceUseCase.execute(applicationDate, productId, brandId);
-        return ResponseEntity.ok(priceRestMapper.toResponse(price));
+        PriceQuery query = new PriceQuery(applicationDate, productId, brandId);
+        MDC.put("brandId", String.valueOf(query.brandId()));
+        MDC.put("productId", String.valueOf(query.productId()));
+        MDC.put("requestDate", query.applicationDate().toString());
+        try {
+            log.info("Price query received: productId={}, brandId={}, applicationDate={}",
+                    query.productId(), query.brandId(), query.applicationDate());
+            var price = getApplicablePriceUseCase.execute(
+                    query.applicationDate(), query.productId(), query.brandId());
+            return ResponseEntity.ok(priceRestMapper.toResponse(price));
+        } finally {
+            MDC.clear();
+        }
     }
 }
+

@@ -46,7 +46,7 @@ La tabla `PRICES` de la base de datos de comercio electrónico refleja el precio
 ### Requisitos funcionales
 
 - El endpoint acepta: `fecha de aplicación`, `identificador de producto`, `identificador de cadena`.
-- Devuelve: `productId`, `brandId`, `priceList`, `startDate`, `endDate`, `price`, `currency`.
+- Devuelve: `productId`, `brandId`, `priceList`, `startDate`, `endDate`, `amount`, `currency`.
 - Base de datos en memoria (H2) inicializada con los datos del ejemplo.
 - Cuando dos tarifas se solapan, se aplica la de **mayor prioridad**.
 
@@ -71,9 +71,10 @@ Todas las decisiones de arquitectura significativas están documentadas como **A
 | [ADR-001](docs/adr/ADR-001-arquitectura-hexagonal.md) | Arquitectura Hexagonal (Ports & Adapters) | ✅ Aceptado |
 | [ADR-002](docs/adr/ADR-002-modelo-dominio-record.md) | Modelo de dominio con Java Record (Value Object inmutable) | ✅ Aceptado |
 | [ADR-003](docs/adr/ADR-003-zona-horaria-utc.md) | Almacenamiento y operación de fechas en UTC | ✅ Aceptado |
-| [ADR-004](docs/adr/ADR-004-query-prioridad-en-bd.md) | Selección de precio por prioridad delegada a la base de datos | ✅ Aceptado |
-| [ADR-005](docs/adr/ADR-005-mappers-mapstruct.md) | Mappers de conversión separados con MapStruct | ✅ Aceptado |
-| [ADR-006](docs/adr/ADR-006-modelo-imperativo-sobre-reactivo.md) | Modelo de programación imperativo sobre reactivo | ✅ Aceptado |
+| [ADR-004](docs/adr/ADR-004-mappers-mapstruct.md) | Mappers de conversión separados con MapStruct | ✅ Aceptado |
+| [ADR-005](docs/adr/ADR-005-modelo-imperativo-sobre-reactivo.md) | Modelo de programación imperativo sobre reactivo | ✅ Aceptado |
+| [ADR-006](docs/adr/ADR-006-logica-seleccion-en-dominio.md) | Selección de precio por prioridad en el dominio | ✅ Aceptado |
+| [ADR-007](docs/adr/ADR-007-cache-caffeine.md) | Caché en memoria con Caffeine | ✅ Aceptado |
 
 ### Resumen ejecutivo de decisiones
 
@@ -110,11 +111,11 @@ Se adopta arquitectura hexagonal con tres capas (dominio, aplicación, infraestr
 
 Todas las fechas se almacenan en UTC. Las del enunciado (hora Madrid) se convierten explícitamente en `data.sql`. Hibernate y los tests JVM se configuran con timezone UTC para garantizar comportamiento determinista en cualquier entorno.
 
-#### 2.4 Desambiguación de prioridad en BD → [ADR-004](docs/adr/ADR-004-query-prioridad-en-bd.md)
+#### 2.4 Selección de precio por prioridad en el dominio → [ADR-006](docs/adr/ADR-006-logica-seleccion-en-dominio.md)
 
-Una única query JPQL con `ORDER BY p.priority DESC LIMIT 1` retorna directamente el precio de mayor prioridad, sin traer filas a memoria Java.
+La query JPQL filtra por rango de fechas y devuelve todos los candidatos (`List<Price>`). La selección del ganador — "ante solapamiento, gana la tarifa de mayor prioridad" — ocurre en `GetApplicablePriceUseCaseImpl` mediante un `stream().filter().max()`. El record `Price` encapsula la lógica de validación de fechas en `isApplicableAt(Instant date)`, habilitando tests unitarios puros sin base de datos.
 
-#### 2.5 Mappers separados con MapStruct → [ADR-005](docs/adr/ADR-005-mappers-mapstruct.md)
+#### 2.5 Mappers separados con MapStruct → [ADR-004](docs/adr/ADR-004-mappers-mapstruct.md)
 
 Dos interfaces MapStruct independientes: `PricePersistenceMapper` (Entity→Domain) y `PriceRestMapper` (Domain→DTO). Código generado en compilación, sin reflexión en runtime.
 
@@ -126,7 +127,11 @@ Dos interfaces MapStruct independientes: `PricePersistenceMapper` (Entity→Doma
 
 `@NotNull` y `@Positive` en los parámetros del controlador con `spring-boot-starter-validation`. La validación ocurre en la frontera de infraestructura, nunca en el dominio.
 
-#### 2.8 Modelo de programación: imperativo sobre reactivo → [ADR-006](docs/adr/ADR-006-modelo-imperativo-sobre-reactivo.md)
+#### 2.8 Caché en memoria con Caffeine → [ADR-007](docs/adr/ADR-007-cache-caffeine.md)
+
+`@Cacheable` en `PricePersistenceAdapter.findCandidatePrices()` con **Caffeine** (TTL = 5 min, maxSize = 1000). Mitiga el impacto de retornar múltiples filas desde la BD (consecuencia de mover la selección por prioridad al dominio, ADR-006) y reduce la carga en patrones de acceso repetitivos. La abstracción `spring-boot-starter-cache` permite migrar a Redis en producción sin modificar código de negocio.
+
+#### 2.9 Modelo de programación: imperativo sobre reactivo → [ADR-005](docs/adr/ADR-005-modelo-imperativo-sobre-reactivo.md)
 
 **Decisión**: pila **bloqueante/imperativa** (`spring-boot-starter-web` + Tomcat + JPA + JDBC).
 
@@ -137,7 +142,7 @@ Dos interfaces MapStruct independientes: `PricePersistenceMapper` (Entity→Doma
 | Acceso a datos | Spring Data JPA + JDBC | Spring Data R2DBC |
 | Driver BD | H2 JDBC | `io.r2dbc:r2dbc-h2` |
 
-**Razones técnicas detalladas** (ver [ADR-006](docs/adr/ADR-006-modelo-imperativo-sobre-reactivo.md)):
+**Razones técnicas detalladas** (ver [ADR-005](docs/adr/ADR-005-modelo-imperativo-sobre-reactivo.md)):
 
  El modelo reactivo aporta valor medible únicamente cuando **todas** estas condiciones concurren:
 - Alta concurrencia sostenida con cientos o miles de peticiones simultáneas.
@@ -164,14 +169,15 @@ price-service/
 │   └── Dockerfile                          # Build multi-stage (JDK builder + JRE runtime)
 ├── docs/
 │   └── adr/                                # Architecture Decision Records
-├── postman/
-│   └── PriceService.postman_collection.json  # Colección Postman v2.1 (19 requests con tests)
 │       ├── ADR-001-arquitectura-hexagonal.md
 │       ├── ADR-002-modelo-dominio-record.md
 │       ├── ADR-003-zona-horaria-utc.md
-│       ├── ADR-004-query-prioridad-en-bd.md
-│       ├── ADR-005-mappers-mapstruct.md
-│       └── ADR-006-modelo-imperativo-sobre-reactivo.md
+│       ├── ADR-004-mappers-mapstruct.md
+│       ├── ADR-005-modelo-imperativo-sobre-reactivo.md
+│       ├── ADR-006-logica-seleccion-en-dominio.md
+│       └── ADR-007-cache-caffeine.md
+├── postman/
+│   └── PriceService.postman_collection.json  # Colección Postman v2.1 (10 requests con tests)
 ├── spec/
 │   └── TestJava2024_1.txt                  # Enunciado original
 ├── src/
@@ -203,13 +209,15 @@ price-service/
 │   │   │       │       └── repository/
 │   │   │       │           └── PriceJpaRepository.java
 │   │   │       ├── config/
-│   │   │       │   └── BeanConfig.java                     # Wiring sin anotaciones en dominio
+│   │   │       │   ├── BeanConfig.java                     # Wiring sin anotaciones en dominio
+│   │   │       │   └── CacheConfig.java                    # Caffeine cache (TTL 5min, max 1000)
 │   │   │       └── entrypoint/
 │   │   │           └── rest/
 │   │   │               ├── controller/
 │   │   │               │   ├── PriceController.java
 │   │   │               │   └── GlobalExceptionHandler.java
 │   │   │               ├── dto/
+│   │   │               │   ├── PriceQuery.java             # Input DTO (agrupa parámetros HTTP)
 │   │   │               │   ├── PriceResponse.java
 │   │   │               │   └── ErrorResponse.java
 │   │   │               └── mapper/
@@ -221,9 +229,10 @@ price-service/
 │   └── test/
 │       └── java/com/inditex/priceservice/
 │           ├── integration/
-│           │   └── PriceControllerIT.java                  # 8 tests de integración
+│           │   └── PriceControllerIT.java                  # 10 tests de integración
 │           └── unit/
-│               └── GetApplicablePriceUseCaseTest.java      # Tests unitarios del caso de uso
+│               ├── GetApplicablePriceUseCaseTest.java      # Tests unitarios del caso de uso
+│               └── PriceTest.java                          # Tests unitarios del dominio Price
 └── build.gradle
 ```
 
@@ -272,7 +281,7 @@ Devuelve el precio aplicable para un producto y cadena en una fecha dada.
   "priceList": 1,
   "startDate": "2020-06-13T22:00:00Z",
   "endDate": "2020-12-31T22:59:59Z",
-  "price": 35.50,
+  "amount": 35.50,
   "currency": "EUR"
 }
 ```
@@ -333,11 +342,22 @@ Los **tests de integración** envían las fechas de consulta también en UTC (ho
 
 ## 7. Tests
 
+### Tests unitarios — `PriceTest`
+
+Prueban el dominio puro sin ninguna dependencia de framework:
+- `isApplicableAt` retorna `true` exactamente en el límite de inicio (inclusivo).
+- `isApplicableAt` retorna `true` exactamente en el límite de fin (inclusivo).
+- `isApplicableAt` retorna `true` para fechas dentro del rango.
+- `isApplicableAt` retorna `false` para fechas anteriores al rango.
+- `isApplicableAt` retorna `false` para fechas posteriores al rango.
+
 ### Tests unitarios — `GetApplicablePriceUseCaseTest`
 
 Prueban el caso de uso en aislamiento total con **Mockito**, sin Spring context:
-- Retorna el precio cuando el puerto de salida encuentra un resultado.
-- Lanza `PriceNotFoundException` cuando no hay precio aplicable.
+- Retorna el precio cuando hay un único candidato en rango.
+- Retorna el precio de **mayor prioridad** cuando hay múltiples candidatos solapados.
+- Lanza `PriceNotFoundException` cuando el puerto no devuelve candidatos.
+- Lanza `PriceNotFoundException` cuando todos los candidatos quedan fuera del rango de fechas (filtro defensivo en dominio).
 
 ### Tests unitarios — `GlobalExceptionHandlerTest`
 
@@ -419,9 +439,9 @@ El directorio [`postman/`](postman/) contiene la colección **Postman v2.1** lis
 
 ### Archivo
 
-| Archivo | Descripción |
-|---------|-------------|
-| [`postman/PriceService.postman_collection.json`](postman/PriceService.postman_collection.json) | Colección con 5 requests y tests automáticos |
+| Archivo | Descripción                                  |
+|---------|----------------------------------------------|
+| [`postman/PriceService.postman_collection.json`](postman/PriceService.postman_collection.json) | Colección con 10 requests y tests automáticos |
 
 ### Cómo importar
 
@@ -430,39 +450,18 @@ El directorio [`postman/`](postman/) contiene la colección **Postman v2.1** lis
 
 ### Escenarios incluidos
 
-#### Escenarios de la especificación (5 casos requeridos)
-
-| Test | Fecha/Hora Madrid | UTC enviado | PriceList esperado | Precio |
-|------|-------------------|-------------|--------------------|--------|
-| 1 | 14/06 10:00 | `2020-06-14T08:00:00Z` | 1 | 35.50 EUR |
-| 2 | 14/06 16:00 | `2020-06-14T14:00:00Z` | 2 | 25.45 EUR |
-| 3 | 14/06 21:00 | `2020-06-14T19:00:00Z` | 1 | 35.50 EUR |
-| 4 | 15/06 10:00 | `2020-06-15T08:00:00Z` | 3 | 30.50 EUR |
-| 5 | 16/06 21:00 | `2020-06-16T19:00:00Z` | 4 | 38.95 EUR |
-
-#### Errores y casos límite (8 casos)
-
-| Caso | HTTP esperado |
-|------|---------------|
-| Producto/brand inexistente | 404 |
-| Fecha anterior a cualquier tarifa | 404 |
-| `brandId` ausente | 400 |
-| `productId` ausente | 400 |
-| `applicationDate` ausente | 400 |
-| Formato de fecha inválido | 400 |
-| `productId` no numérico | 400 |
-| `productId` negativo (viola `@Positive`) | 400 |
-
-#### Casos límite de solapamiento de tarifas (6 casos)
-
-| Caso | Resultado esperado |
-|------|--------------------|
-| Inicio exacto PriceList 2 (13:00:00 UTC Jun14) | PL-2 → 25.45 EUR |
-| Fin exacto PriceList 2 (16:30:00 UTC Jun14) | PL-2 → 25.45 EUR |
-| Un segundo después del fin de PL-2 | PL-1 → 35.50 EUR |
-| Inicio exacto PriceList 3 (22:00:00 UTC Jun14) | PL-3 → 30.50 EUR |
-| Entre fin PL-3 y inicio PL-4 (10:00 UTC Jun15) | PL-1 → 35.50 EUR |
-| Inicio exacto PriceList 4 (14:00:00 UTC Jun15) | PL-4 → 38.95 EUR |
+| # | Descripción | Fecha UTC | HTTP | `amount` esperado |
+|---|-------------|-----------|------|-------------------|
+| Test 1 | 10:00h 14/Jun → PriceList 1 | `2020-06-14T08:00:00Z` | 200 | 35.50 EUR |
+| Test 2 | 16:00h 14/Jun → PriceList 2 | `2020-06-14T14:00:00Z` | 200 | 25.45 EUR |
+| Test 3 | 21:00h 14/Jun → PriceList 1 | `2020-06-14T19:00:00Z` | 200 | 35.50 EUR |
+| Test 4 | 10:00h 15/Jun → PriceList 3 | `2020-06-15T08:00:00Z` | 200 | 30.50 EUR |
+| Test 5 | 21:00h 16/Jun → PriceList 4 | `2020-06-16T19:00:00Z` | 200 | 38.95 EUR |
+| Test 6 | Límite exacto inicio PriceList 2 | `2020-06-14T13:00:00Z` | 200 | 25.45 EUR |
+| Test 7 | Límite exacto fin PriceList 2 | `2020-06-14T16:30:00Z` | 200 | 25.45 EUR |
+| Test 8 | Sin precio aplicable (año 2000) | `2000-01-01T00:00:00Z` | 404 | — |
+| Test 9 | Parámetro `applicationDate` ausente | — | 400 | — |
+| Test 10 | Formato de fecha inválido | `not-a-date` | 400 | — |
 
 Cada request incluye **tests automáticos de Postman** que verifican el código HTTP, los campos del body y los valores esperados. Para ejecutar toda la colección de una vez se puede usar **Newman** (CLI de Postman):
 
@@ -537,7 +536,7 @@ Respuesta esperada:
   "priceList": 1,
   "startDate": "2020-06-13T22:00:00Z",
   "endDate": "2020-12-31T22:59:59Z",
-  "price": 35.50,
+  "amount": 35.50,
   "currency": "EUR"
 }
 ```
@@ -616,6 +615,8 @@ docker compose up
 | H2 Database | (managed) | Base de datos en memoria |
 | MapStruct | 1.6.3 | Mapeo entre capas sin reflexión |
 | Lombok | (managed) | Reducción de boilerplate |
+| Spring Cache | (managed) | Abstracción de caché (`@Cacheable`) |
+| Caffeine | (managed) | Proveedor de caché en memoria (TTL, LFU) |
 | SpringDoc OpenAPI | 2.8.6 | Documentación Swagger automática |
 | JaCoCo | (managed) | Cobertura de código |
 | Mockito | (managed) | Mocks en tests unitarios |

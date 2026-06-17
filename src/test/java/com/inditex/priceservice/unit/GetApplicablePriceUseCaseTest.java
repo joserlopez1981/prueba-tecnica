@@ -12,7 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,39 +27,60 @@ class GetApplicablePriceUseCaseTest {
     @InjectMocks
     private GetApplicablePriceUseCaseImpl useCase;
 
+    private static final Instant DATE = Instant.parse("2020-06-14T14:00:00Z");
+    private static final Long PRODUCT_ID = 35455L;
+    private static final Long BRAND_ID = 1L;
+
     @Test
-    void shouldReturnPrice_whenApplicablePriceExists() {
-        Instant applicationDate = Instant.parse("2020-06-14T10:00:00Z");
-        Long productId = 35455L;
-        Long brandId = 1L;
+    void shouldReturnPrice_whenSingleCandidateExists() {
+        Price expected = priceWithPriority(1, 0, "2020-06-13T22:00:00Z", "2020-12-31T21:59:59Z", "35.50");
 
-        Price expectedPrice = new Price(
-                brandId, productId, 1, 0,
-                Instant.parse("2020-06-13T22:00:00Z"),
-                Instant.parse("2020-12-31T21:59:59Z"),
-                new BigDecimal("35.50"), "EUR"
-        );
+        when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
+                .thenReturn(List.of(expected));
 
-        when(findPricePort.findApplicablePrice(applicationDate, productId, brandId))
-                .thenReturn(Optional.of(expectedPrice));
-
-        Price result = useCase.execute(applicationDate, productId, brandId);
-
-        assertThat(result).isEqualTo(expectedPrice);
+        assertThat(useCase.execute(DATE, PRODUCT_ID, BRAND_ID)).isEqualTo(expected);
     }
 
     @Test
-    void shouldThrowPriceNotFoundException_whenNoPriceExists() {
-        Instant applicationDate = Instant.now();
-        Long productId = 99999L;
-        Long brandId = 99L;
+    void shouldReturnHighestPriority_whenMultipleCandidatesExist() {
+        Price lowPriority  = priceWithPriority(1, 0, "2020-06-13T22:00:00Z", "2020-12-31T21:59:59Z", "35.50");
+        Price highPriority = priceWithPriority(2, 1, "2020-06-14T13:00:00Z", "2020-06-14T16:30:00Z", "25.45");
 
-        when(findPricePort.findApplicablePrice(applicationDate, productId, brandId))
-                .thenReturn(Optional.empty());
+        when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
+                .thenReturn(List.of(lowPriority, highPriority));
 
-        assertThatThrownBy(() -> useCase.execute(applicationDate, productId, brandId))
+        assertThat(useCase.execute(DATE, PRODUCT_ID, BRAND_ID)).isEqualTo(highPriority);
+    }
+
+    @Test
+    void shouldThrowPriceNotFoundException_whenNoCandidatesExist() {
+        when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
+                .thenReturn(List.of());
+
+        assertThatThrownBy(() -> useCase.execute(DATE, PRODUCT_ID, BRAND_ID))
                 .isInstanceOf(PriceNotFoundException.class)
-                .hasMessageContaining(String.valueOf(productId))
-                .hasMessageContaining(String.valueOf(brandId));
+                .hasMessageContaining(String.valueOf(PRODUCT_ID))
+                .hasMessageContaining(String.valueOf(BRAND_ID));
+    }
+
+    @Test
+    void shouldThrowPriceNotFoundException_whenAllCandidatesAreOutsideDateRange() {
+        // Defensive domain filter: candidate returned by DB but not applicable at query date
+        Price outOfRange = priceWithPriority(1, 0, "2020-06-15T00:00:00Z", "2020-06-15T12:00:00Z", "30.50");
+
+        when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
+                .thenReturn(List.of(outOfRange));
+
+        assertThatThrownBy(() -> useCase.execute(DATE, PRODUCT_ID, BRAND_ID))
+                .isInstanceOf(PriceNotFoundException.class);
+    }
+
+    // --- helpers ---
+
+    private Price priceWithPriority(int priceList, int priority, String start, String end, String amount) {
+        return new Price(BRAND_ID, PRODUCT_ID, priceList, priority,
+                Instant.parse(start), Instant.parse(end),
+                new BigDecimal(amount), "EUR");
     }
 }
+

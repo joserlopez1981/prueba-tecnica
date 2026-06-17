@@ -1,4 +1,4 @@
-# ADR-005: Mappers de conversión separados con MapStruct
+# ADR-004: Mappers de conversión separados con MapStruct
 
 | Campo | Valor |
 |-------|-------|
@@ -64,5 +64,5 @@ MapStruct genera las implementaciones en tiempo de compilación (no reflexión e
 
 **Negativas / trade-offs:**
 - Dos interfaces adicionales en el proyecto.
-- Las implementaciones `*MapperImpl` aparecen en el classpath y deben excluirse explícitamente de JaCoCo (ver [ADR-006](ADR-006-modelo-imperativo-sobre-reactivo.md) para la estrategia de cobertura).
+- Las implementaciones `*MapperImpl` aparecen en el classpath y deben excluirse explícitamente de JaCoCo (ver [ADR-005](ADR-005-modelo-imperativo-sobre-reactivo.md) para la estrategia de cobertura).
 - Si los campos del record y la entidad tienen el mismo nombre y tipo, MapStruct los mapea automáticamente; si difieren, requieren anotaciones `@Mapping` explícitas.

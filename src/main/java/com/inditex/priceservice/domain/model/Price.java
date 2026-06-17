@@ -10,7 +10,13 @@ public record Price(
         Integer priority,
         Instant startDate,
         Instant endDate,
-        BigDecimal price,
+        BigDecimal amount,
         String currency
 ) {
+    /**
+     * Returns true if the given date falls within this price's validity period (inclusive on both boundaries).
+     */
+    public boolean isApplicableAt(Instant date) {
+        return !date.isBefore(startDate) && !date.isAfter(endDate);
+    }
 }

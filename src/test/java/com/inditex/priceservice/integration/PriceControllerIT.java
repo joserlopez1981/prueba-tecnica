@@ -44,7 +44,7 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(1))
-                .andExpect(jsonPath("$.price").value(35.50))
+                .andExpect(jsonPath("$.amount").value(35.50))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
 
@@ -61,7 +61,7 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(2))
-                .andExpect(jsonPath("$.price").value(25.45))
+                .andExpect(jsonPath("$.amount").value(25.45))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
 
@@ -78,7 +78,7 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(1))
-                .andExpect(jsonPath("$.price").value(35.50))
+                .andExpect(jsonPath("$.amount").value(35.50))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
 
@@ -95,7 +95,7 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(3))
-                .andExpect(jsonPath("$.price").value(30.50))
+                .andExpect(jsonPath("$.amount").value(30.50))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
 
@@ -112,7 +112,37 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(4))
-                .andExpect(jsonPath("$.price").value(38.95))
+                .andExpect(jsonPath("$.amount").value(38.95))
+                .andExpect(jsonPath("$.currency").value("EUR"));
+    }
+
+    @Test
+    @DisplayName("Boundary: exact start of PriceList 2 → Price list 2 (25.45 EUR)")
+    void testBoundary_exactStartOfPriceList2_shouldReturnPriceList2() throws Exception {
+        // PL-2 startDate = 2020-06-14T13:00:00Z (Madrid 15:00 - 2h)
+        mockMvc.perform(get(ENDPOINT)
+                        .param("applicationDate", "2020-06-14T13:00:00Z")
+                        .param("productId", PRODUCT_ID)
+                        .param("brandId", BRAND_ID)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceList").value(2))
+                .andExpect(jsonPath("$.amount").value(25.45))
+                .andExpect(jsonPath("$.currency").value("EUR"));
+    }
+
+    @Test
+    @DisplayName("Boundary: exact end of PriceList 2 → Price list 2 (25.45 EUR)")
+    void testBoundary_exactEndOfPriceList2_shouldReturnPriceList2() throws Exception {
+        // PL-2 endDate = 2020-06-14T16:30:00Z (Madrid 18:30 - 2h)
+        mockMvc.perform(get(ENDPOINT)
+                        .param("applicationDate", "2020-06-14T16:30:00Z")
+                        .param("productId", PRODUCT_ID)
+                        .param("brandId", BRAND_ID)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceList").value(2))
+                .andExpect(jsonPath("$.amount").value(25.45))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
 

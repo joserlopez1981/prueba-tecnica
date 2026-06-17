@@ -1,4 +1,4 @@
-# ADR-006: Modelo de programación imperativo sobre reactivo
+# ADR-005: Modelo de programación imperativo sobre reactivo
 
 | Campo | Valor |
 |-------|-------|

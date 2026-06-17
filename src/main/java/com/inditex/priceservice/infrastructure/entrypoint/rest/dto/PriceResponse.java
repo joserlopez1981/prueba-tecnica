@@ -9,7 +9,7 @@ public record PriceResponse(
         Integer priceList,
         Instant startDate,
         Instant endDate,
-        BigDecimal price,
+        BigDecimal amount,
         String currency
 ) {
 }
