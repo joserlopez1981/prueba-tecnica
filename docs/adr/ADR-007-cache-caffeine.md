@@ -55,6 +55,20 @@ La clave de caché es generada automáticamente por Spring `SimpleKeyGenerator` 
 - Caché local (no distribuida): en despliegues con múltiples instancias, cada pod tiene su propia caché. Para escenarios con muy alta consistencia, se requeriría Redis o invalidación vía eventos.
 - Consumo adicional de memoria JVM (acotado por `maximumSize = 1000`).
 
+## Configuración externalizada
+
+Los parámetros de la caché (`ttl-minutes` y `max-size`) **no están hardcodeados** en `CacheConfig`. Se leen de `application.yml` mediante `@ConfigurationProperties` (ver [ADR-008](ADR-008-externalizacion-configuracion-cache.md)):
+
+```yaml
+app:
+  cache:
+    prices:
+      ttl-minutes: 5
+      max-size: 1000
+```
+
+Esto permite ajustar la configuración por entorno (dev/staging/prod) sin recompilar.
+
 ## Nota sobre producción
 
 Para entornos con múltiples instancias (Kubernetes, ECS), considerar:

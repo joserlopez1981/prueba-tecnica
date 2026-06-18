@@ -1,6 +1,7 @@
 package com.inditex.priceservice.infrastructure.config;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.context.annotation.Bean;
@@ -10,14 +11,15 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableCaching
+@EnableConfigurationProperties(CacheProperties.class)
 public class CacheConfig {
 
     @Bean
-    public CaffeineCache pricesCache() {
+    public CaffeineCache pricesCache(CacheProperties props) {
         return new CaffeineCache("prices",
                 Caffeine.newBuilder()
-                        .expireAfterWrite(5, TimeUnit.MINUTES)
-                        .maximumSize(1000)
+                        .expireAfterWrite(props.ttlMinutes(), TimeUnit.MINUTES)
+                        .maximumSize(props.maxSize())
                         .build());
     }
 }

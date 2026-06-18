@@ -35,3 +35,9 @@ logging:
     com.inditex.priceservice: INFO
     org.springframework.web: WARN
     org.hibernate.SQL: WARN
+
+app:
+  cache:
+    prices:
+      ttl-minutes: 5
+      max-size: 1000
