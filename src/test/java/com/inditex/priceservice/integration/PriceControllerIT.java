@@ -44,6 +44,8 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(1))
+                .andExpect(jsonPath("$.startDate").value("2020-06-13T22:00:00Z"))
+                .andExpect(jsonPath("$.endDate").value("2020-12-31T22:59:59Z"))
                 .andExpect(jsonPath("$.amount").value(35.50))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
@@ -61,6 +63,8 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(2))
+                .andExpect(jsonPath("$.startDate").value("2020-06-14T13:00:00Z"))
+                .andExpect(jsonPath("$.endDate").value("2020-06-14T16:30:00Z"))
                 .andExpect(jsonPath("$.amount").value(25.45))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
@@ -78,6 +82,8 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(1))
+                .andExpect(jsonPath("$.startDate").value("2020-06-13T22:00:00Z"))
+                .andExpect(jsonPath("$.endDate").value("2020-12-31T22:59:59Z"))
                 .andExpect(jsonPath("$.amount").value(35.50))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
@@ -95,6 +101,8 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(3))
+                .andExpect(jsonPath("$.startDate").value("2020-06-14T22:00:00Z"))
+                .andExpect(jsonPath("$.endDate").value("2020-06-15T09:00:00Z"))
                 .andExpect(jsonPath("$.amount").value(30.50))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }
@@ -112,6 +120,8 @@ class PriceControllerIT {
                 .andExpect(jsonPath("$.productId").value(35455))
                 .andExpect(jsonPath("$.brandId").value(1))
                 .andExpect(jsonPath("$.priceList").value(4))
+                .andExpect(jsonPath("$.startDate").value("2020-06-15T14:00:00Z"))
+                .andExpect(jsonPath("$.endDate").value("2020-12-31T22:59:59Z"))
                 .andExpect(jsonPath("$.amount").value(38.95))
                 .andExpect(jsonPath("$.currency").value("EUR"));
     }

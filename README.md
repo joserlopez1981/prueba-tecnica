@@ -39,7 +39,7 @@ La tabla `PRICES` de la base de datos de comercio electrónico refleja el precio
 - `START_DATE` / `END_DATE`: Rango de fechas en el que aplica la tarifa.
 - `PRICE_LIST`: Identificador de la tarifa de precios aplicable.
 - `PRODUCT_ID`: Identificador del producto.
-- `PRIORITY`: Desambiguador. Si dos tarifas coinciden en rango de fechas, se aplica la de mayor valor numérico.
+- `PRIORITY`: Desambiguador. Si dos tarifas coinciden en rango de fechas, se aplica la de mayor valor numérico. En caso de empate de prioridad, se aplica la de `START_DATE` más reciente.
 - `PRICE`: Precio final de venta.
 - `CURR`: ISO de la moneda.
 
@@ -48,7 +48,7 @@ La tabla `PRICES` de la base de datos de comercio electrónico refleja el precio
 - El endpoint acepta: `fecha de aplicación`, `identificador de producto`, `identificador de cadena`.
 - Devuelve: `productId`, `brandId`, `priceList`, `startDate`, `endDate`, `amount`, `currency`.
 - Base de datos en memoria (H2) inicializada con los datos del ejemplo.
-- Cuando dos tarifas se solapan, se aplica la de **mayor prioridad**.
+- Cuando dos tarifas se solapan, se aplica la de **mayor prioridad**. Si la prioridad es igual, gana la de `startDate` más reciente (criterio de desempate explícito).
 
 ### Casos de test requeridos (hora Madrid, UTC+2 en junio)
 
@@ -113,7 +113,7 @@ Todas las fechas se almacenan en UTC. Las del enunciado (hora Madrid) se convier
 
 #### 2.4 Selección de precio por prioridad en el dominio → [ADR-006](docs/adr/ADR-006-logica-seleccion-en-dominio.md)
 
-La query JPQL filtra por rango de fechas y devuelve todos los candidatos (`List<Price>`). La selección del ganador — "ante solapamiento, gana la tarifa de mayor prioridad" — ocurre en `GetApplicablePriceUseCaseImpl` mediante un `stream().filter().max()`. El record `Price` encapsula la lógica de validación de fechas en `isApplicableAt(Instant date)`, habilitando tests unitarios puros sin base de datos.
+La query JPQL filtra por rango de fechas y devuelve todos los candidatos (`List<Price>`). La selección del ganador ocurre en `GetApplicablePriceUseCaseImpl` mediante un `stream().filter().max()` con un comparador de dos niveles: primero por `priority` (mayor gana) y, en caso de empate, por `startDate` (más reciente gana). El record `Price` encapsula la lógica de validación de fechas en `isApplicableAt(Instant date)`, habilitando tests unitarios puros sin base de datos.
 
 #### 2.5 Mappers separados con MapStruct → [ADR-004](docs/adr/ADR-004-mappers-mapstruct.md)
 
@@ -356,7 +356,9 @@ Prueban el dominio puro sin ninguna dependencia de framework:
 Prueban el caso de uso en aislamiento total con **Mockito**, sin Spring context:
 - Retorna el precio cuando hay un único candidato en rango.
 - Retorna el precio de **mayor prioridad** cuando hay múltiples candidatos solapados.
+- Retorna el precio con `startDate` más reciente ante empate de prioridad (desempate determinista).
 - Lanza `PriceNotFoundException` cuando el puerto no devuelve candidatos.
+- Lanza `PriceNotFoundException` cuando el puerto devuelve `null` (robustez en frontera de infraestructura).
 - Lanza `PriceNotFoundException` cuando todos los candidatos quedan fuera del rango de fechas (filtro defensivo en dominio).
 
 ### Tests unitarios — `GlobalExceptionHandlerTest`
@@ -388,19 +390,19 @@ Levantan el contexto completo de Spring Boot con base de datos H2 en memoria y v
 
 ### Cobertura de código (JaCoCo)
 
-**Resultado actual: 98% de instrucciones cubiertas** sobre el código de negocio relevante.
+**Resultado actual: 99% de instrucciones cubiertas** sobre el código de negocio relevante.
 
 | Paquete | Instrucciones cubiertas | Branches cubiertas |
 |---------|------------------------|--------------------|
 | `application.usecase` | **100 %** | n/a |
-| `domain.model` | **100 %** | n/a |
+| `domain.model` | **100 %** | **100 %** |
 | `domain.exception` | **100 %** | n/a |
 | `domain.port` | **100 %** | n/a |
 | `infrastructure.config` | **100 %** | n/a |
 | `infrastructure.adapter.persistence.adapter` | **100 %** | n/a |
 | `infrastructure.entrypoint.rest.dto` | **100 %** | n/a |
-| `infrastructure.entrypoint.rest.controller` | **97 %** | 50 % (*) |
-| **Total (clases relevantes)** | **98 %** | — |
+| `infrastructure.entrypoint.rest.controller` | **98 %** | 50 % (*) |
+| **Total (clases relevantes)** | **99 %** | — |
 
 > (*) El único branch no cubierto corresponde al path `orElse` del stream vacío en `handleConstraintViolationException`, que se activa cuando `ConstraintViolationException` no contiene objetos `ConstraintViolation`. Este path es teóricamente posible según la API de Jakarta, pero no lo genera ningún mecanismo real del framework en tiempo de ejecución, por lo que cubrir ese branch requeriría un mock artificial que no refleja comportamiento productivo real.
 

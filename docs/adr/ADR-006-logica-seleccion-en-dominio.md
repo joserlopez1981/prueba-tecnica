@@ -37,7 +37,8 @@ List<Price> findCandidatePrices(Instant applicationDate, Long productId, Long br
 ```java
 return candidates.stream()
         .filter(p -> p.isApplicableAt(applicationDate))   // filtro defensivo en dominio
-        .max(Comparator.comparingInt(Price::priority))
+        .max(Comparator.comparingInt(Price::priority)
+                .thenComparing(Price::startDate))          // desempate: startDate más reciente
         .orElseThrow(() -> new PriceNotFoundException(productId, brandId));
 ```
 

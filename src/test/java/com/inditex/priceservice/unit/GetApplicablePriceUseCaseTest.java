@@ -65,11 +65,30 @@ class GetApplicablePriceUseCaseTest {
 
     @Test
     void shouldThrowPriceNotFoundException_whenAllCandidatesAreOutsideDateRange() {
-        // Defensive domain filter: candidate returned by DB but not applicable at query date
         Price outOfRange = priceWithPriority(1, 0, "2020-06-15T00:00:00Z", "2020-06-15T12:00:00Z", "30.50");
 
         when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
                 .thenReturn(List.of(outOfRange));
+
+        assertThatThrownBy(() -> useCase.execute(DATE, PRODUCT_ID, BRAND_ID))
+                .isInstanceOf(PriceNotFoundException.class);
+    }
+
+    @Test
+    void shouldReturnMostRecentStart_whenSamePriorityTie() {
+        Price earlier    = priceWithPriority(1, 1, "2020-06-13T00:00:00Z", "2020-12-31T21:59:59Z", "35.50");
+        Price moreRecent = priceWithPriority(2, 1, "2020-06-14T00:00:00Z", "2020-12-31T21:59:59Z", "25.45");
+
+        when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
+                .thenReturn(List.of(earlier, moreRecent));
+
+        assertThat(useCase.execute(DATE, PRODUCT_ID, BRAND_ID)).isEqualTo(moreRecent);
+    }
+
+    @Test
+    void shouldThrowPriceNotFoundException_whenPortReturnsNull() {
+        when(findPricePort.findCandidatePrices(DATE, PRODUCT_ID, BRAND_ID))
+                .thenReturn(null);
 
         assertThatThrownBy(() -> useCase.execute(DATE, PRODUCT_ID, BRAND_ID))
                 .isInstanceOf(PriceNotFoundException.class);

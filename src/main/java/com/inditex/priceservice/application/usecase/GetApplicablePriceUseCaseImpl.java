@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 public class GetApplicablePriceUseCaseImpl implements GetApplicablePriceUseCase {
@@ -21,12 +22,14 @@ public class GetApplicablePriceUseCaseImpl implements GetApplicablePriceUseCase 
 
     @Override
     public Price execute(Instant applicationDate, Long productId, Long brandId) {
-        List<Price> candidates = findPricePort.findCandidatePrices(applicationDate, productId, brandId);
+        List<Price> candidates = Objects.requireNonNullElse(
+                findPricePort.findCandidatePrices(applicationDate, productId, brandId), List.of());
         log.debug("Found {} candidate price(s) for productId={}, brandId={}", candidates.size(), productId, brandId);
 
         return candidates.stream()
                 .filter(p -> p.isApplicableAt(applicationDate))
-                .max(Comparator.comparingInt(Price::priority))
+                .max(Comparator.comparingInt(Price::priority)
+                        .thenComparing(Price::startDate))
                 .map(price -> {
                     log.info("Applicable price selected: priceList={}, priority={}, amount={}",
                             price.priceList(), price.priority(), price.amount());
