@@ -47,6 +47,7 @@ Thumbs.db
 
 # Package files
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
